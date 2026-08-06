@@ -223,6 +223,7 @@ describe("removeUnusedPrefabHoles", () => {
 		);
 
 		expect(result.matchedCladHoleCount).toBe(4);
+		expect(result.alreadyAbsentCladHoleCount).toBe(0);
 		expect(result.removedUnusedCladHoleCount).toBe(2);
 		expect(result.preservedUsedCladHoleCount).toBe(2);
 		expect(result.matchedCladTraceCount).toBe(1);
@@ -294,6 +295,46 @@ describe("removeUnusedPrefabHoles", () => {
 		expect(result.preservedUsedCladHoleCount).toBe(1);
 	});
 
+	test("preserves a via connected at an interior wire route point", () => {
+		const clad = [
+			{
+				type: "pcb_via",
+				pcb_via_id: "clad_via",
+				x: 5,
+				y: 0,
+				hole_diameter: 0.3,
+				outer_diameter: 0.6,
+				layers: ["top", "bottom"],
+			},
+		] as CircuitJson;
+		const final = [
+			{
+				...clad[0],
+				pcb_via_id: "final_via",
+			},
+			{
+				type: "pcb_trace",
+				pcb_trace_id: "trace_through_via",
+				route: [
+					{ route_type: "wire", x: 0, y: 0, width: 0.1, layer: "top" },
+					{ route_type: "wire", x: 5, y: 0, width: 0.1, layer: "top" },
+					{ route_type: "wire", x: 10, y: 0, width: 0.1, layer: "top" },
+				],
+			},
+		] as CircuitJson;
+
+		const result = removeUnusedPrefabHoles(clad, final);
+
+		expect(result.preservedUsedCladHoleCount).toBe(1);
+		expect(
+			result.circuitJson.some(
+				(element) =>
+					element.type === "pcb_via" &&
+					element.pcb_via_id === "final_via",
+			),
+		).toBe(true);
+	});
+
 	test("matches duplicate geometry one-to-one", () => {
 		const clad = [
 			{
@@ -317,6 +358,24 @@ describe("removeUnusedPrefabHoles", () => {
 		expect(result.circuitJson[0]).toEqual(
 			expect.objectContaining({ pcb_hole_id: "second" }),
 		);
+	});
+
+	test("treats clad holes missing from the final circuit as already absent", () => {
+		const clad = createCladCircuit();
+		const final = createFinalCircuit().filter(
+			(element) =>
+				!(element.type === "pcb_via" && element.x === 20),
+		) as CircuitJson;
+
+		const result = removeUnusedPrefabHoles(clad, final);
+
+		expect(result.matchedCladHoleCount).toBe(3);
+		expect(result.alreadyAbsentCladHoleCount).toBe(1);
+		expect(result.countsByType.pcb_via).toEqual({
+			matched: 0,
+			removed: 0,
+			preserved: 0,
+		});
 	});
 
 	test("normalizes KiCad-roundtripped via layer metadata", () => {

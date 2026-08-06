@@ -24,6 +24,7 @@ export interface HoleRemovalCounts {
 export interface RemoveUnusedPrefabHolesResult {
 	circuitJson: CircuitJson;
 	matchedCladHoleCount: number;
+	alreadyAbsentCladHoleCount: number;
 	removedUnusedCladHoleCount: number;
 	preservedUsedCladHoleCount: number;
 	matchedCladTraceCount: number;
@@ -219,14 +220,15 @@ const getPoint = (value: unknown): Point | undefined => {
 		: undefined;
 };
 
-const getRouteEndpoint = (
+const getRoutePoints = (
 	point: PcbTrace["route"][number],
-	side: "start" | "end",
-): Point | undefined => {
+): Point[] => {
 	if (point.route_type === "through_pad") {
-		return getPoint(side === "start" ? point.start : point.end);
+		return [getPoint(point.start), getPoint(point.end)].filter(
+			(routePoint): routePoint is Point => routePoint !== undefined,
+		);
 	}
-	return { x: point.x, y: point.y };
+	return [{ x: point.x, y: point.y }];
 };
 
 const pointsMatch = (left: Point, right: Point, tolerance: number): boolean =>
@@ -381,7 +383,7 @@ export const removeUnusedPrefabHoles = (
 		);
 	}
 
-	if (unmatchedCladHoles.length > 0) {
+	if (matchedHolesByFinalIndex.size === 0) {
 		throw new Error(
 			`Could not match ${unmatchedCladHoles.length} of ${cladHoles.length} clad holes in the final Circuit JSON; ensure both files use the same coordinates and unmodified hole geometry`,
 		);
@@ -436,22 +438,14 @@ export const removeUnusedPrefabHoles = (
 			usedHoleIndices,
 		});
 
-		const endpointPoints: Point[] = [];
-		const firstPoint = trace.route[0];
-		const lastPoint = trace.route.at(-1);
-		if (firstPoint) {
-			const point = getRouteEndpoint(firstPoint, "start");
-			if (point) endpointPoints.push(point);
-		}
-		if (lastPoint) {
-			const point = getRouteEndpoint(lastPoint, "end");
-			if (point) endpointPoints.push(point);
-		}
+		const routePoints: Point[] = trace.route.flatMap(
+			(point: PcbTrace["route"][number]) => getRoutePoints(point),
+		);
 
 		for (const matchedHole of matchedConductiveHoles) {
 			const holePoint = getHolePoint(matchedHole.element);
 			if (
-				endpointPoints.some((point) =>
+				routePoints.some((point) =>
 					pointsMatch(point, holePoint, tolerance),
 				)
 			) {
@@ -506,6 +500,7 @@ export const removeUnusedPrefabHoles = (
 	return {
 		circuitJson: connectivityResult.circuitJson,
 		matchedCladHoleCount: matchedHolesByFinalIndex.size,
+		alreadyAbsentCladHoleCount: unmatchedCladHoles.length,
 		removedUnusedCladHoleCount: removedHoleIndices.size,
 		preservedUsedCladHoleCount: usedHoleIndices.size,
 		matchedCladTraceCount: matchedCladTraceFinalIndices.size,

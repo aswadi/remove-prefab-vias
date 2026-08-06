@@ -176,8 +176,8 @@ export default function Home() {
                 </div>
                 <dl className="metrics">
                   <div>
-                    <dt>Matched</dt>
-                    <dd>{result.matchedCladHoleCount.toLocaleString()}</dd>
+                    <dt>Already absent</dt>
+                    <dd>{result.alreadyAbsentCladHoleCount.toLocaleString()}</dd>
                   </div>
                   <div>
                     <dt>Removed</dt>

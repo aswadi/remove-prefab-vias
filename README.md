@@ -6,6 +6,8 @@ Remove unused holes and pre-existing traces belonging to a prefabricated clad fr
 The bare clad Circuit JSON is used as the reference inventory. Hole and trace
 ownership is inferred from PCB geometry, so source groups, component names, and
 generated element IDs do not need to match between the two files.
+Clad holes that are already absent from the composed circuit are reported and
+otherwise ignored.
 
 ## Web app
 
