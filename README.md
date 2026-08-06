@@ -71,5 +71,9 @@ removeUnusedPrefabHoles(clad, finalCircuit, {
 })
 ```
 
+Via layers are compared as an unordered effective layer set. The modern
+`layers` field takes precedence, with deprecated `from_layer` and `to_layer`
+fields used as a fallback for legacy Circuit JSON.
+
 The function deliberately performs no other laser-specific postprocessing: it
 does not enlarge drills, filter layers, or generate tooling paths.

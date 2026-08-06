@@ -319,6 +319,98 @@ describe("removeUnusedPrefabHoles", () => {
 		);
 	});
 
+	test("normalizes KiCad-roundtripped via layer metadata", () => {
+		const clad = [
+			{
+				type: "pcb_via",
+				pcb_via_id: "clad_via",
+				x: 1,
+				y: 2,
+				hole_diameter: 0.2,
+				outer_diameter: 0.4,
+				layers: ["bottom", "top"],
+				from_layer: "top",
+				to_layer: "bottom",
+			},
+		] as CircuitJson;
+		const final = [
+			{
+				type: "pcb_via",
+				pcb_via_id: "kicad_via",
+				x: 1,
+				y: 2,
+				hole_diameter: 0.2,
+				outer_diameter: 0.4,
+				layers: ["top", "bottom"],
+			},
+		] as CircuitJson;
+
+		const result = removeUnusedPrefabHoles(clad, final);
+
+		expect(result.matchedCladHoleCount).toBe(1);
+		expect(result.removedUnusedCladHoleCount).toBe(1);
+		expect(result.circuitJson).toHaveLength(0);
+	});
+
+	test("falls back to deprecated via layer fields when layers is absent", () => {
+		const clad = [
+			{
+				type: "pcb_via",
+				pcb_via_id: "legacy_via",
+				x: 1,
+				y: 2,
+				hole_diameter: 0.2,
+				outer_diameter: 0.4,
+				from_layer: "top",
+				to_layer: "bottom",
+			},
+		] as CircuitJson;
+		const final = [
+			{
+				type: "pcb_via",
+				pcb_via_id: "modern_via",
+				x: 1,
+				y: 2,
+				hole_diameter: 0.2,
+				outer_diameter: 0.4,
+				layers: ["bottom", "top"],
+			},
+		] as CircuitJson;
+
+		expect(removeUnusedPrefabHoles(clad, final).matchedCladHoleCount).toBe(1);
+	});
+
+	test("rejects vias with different effective layer spans", () => {
+		const clad = [
+			{
+				type: "pcb_via",
+				pcb_via_id: "through_via",
+				x: 1,
+				y: 2,
+				hole_diameter: 0.2,
+				outer_diameter: 0.4,
+				layers: ["top", "bottom"],
+				from_layer: "top",
+				to_layer: "bottom",
+			},
+		] as CircuitJson;
+		const final = [
+			{
+				type: "pcb_via",
+				pcb_via_id: "blind_via",
+				x: 1,
+				y: 2,
+				hole_diameter: 0.2,
+				outer_diameter: 0.4,
+				layers: ["top", "inner1"],
+			},
+		] as CircuitJson;
+
+		expect(() => removeUnusedPrefabHoles(clad, final)).toThrow(
+			"Could not match 1 of 1 clad holes",
+		);
+	});
+
 	test("rejects missing clad geometry and invalid tolerance", () => {
 		expect(() => removeUnusedPrefabHoles([] as CircuitJson, [])).toThrow(
 			"does not contain any",

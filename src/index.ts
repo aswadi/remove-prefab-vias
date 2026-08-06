@@ -65,9 +65,6 @@ const HOLE_GEOMETRY_KEYS = [
 	"hole_ccw_rotation",
 	"rect_ccw_rotation",
 	"pad_outline",
-	"layers",
-	"from_layer",
-	"to_layer",
 ] as const;
 
 const isHoleElement = (element: CircuitElement): element is HoleElement =>
@@ -123,9 +120,15 @@ const selectKeys = (
 };
 
 const getHoleGeometry = (hole: HoleElement): JsonRecord => {
-	const geometry = selectKeys(hole as unknown as JsonRecord, HOLE_GEOMETRY_KEYS);
-	if (Array.isArray(geometry.layers)) {
-		geometry.layers = [...geometry.layers].sort();
+	const record = hole as unknown as JsonRecord;
+	const geometry = selectKeys(record, HOLE_GEOMETRY_KEYS);
+	const effectiveLayers = Array.isArray(record.layers)
+		? record.layers
+		: [record.from_layer, record.to_layer].filter(
+				(layer): layer is string => typeof layer === "string",
+			);
+	if (effectiveLayers.length > 0) {
+		geometry.layers = [...new Set(effectiveLayers)].sort();
 	}
 	return geometry;
 };
