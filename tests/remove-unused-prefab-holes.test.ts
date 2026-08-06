@@ -1,0 +1,329 @@
+import { describe, expect, test } from "bun:test";
+import type { CircuitJson } from "circuit-json";
+import {
+	parseCircuitJson,
+	removeUnusedPrefabHoles,
+} from "../src/index";
+
+const createCladCircuit = (): CircuitJson =>
+	[
+		{
+			type: "pcb_plated_hole",
+			pcb_plated_hole_id: "clad_hole_a",
+			pcb_port_id: "clad_port_a",
+			shape: "circle",
+			x: 0,
+			y: 0,
+			hole_diameter: 1,
+			outer_diameter: 1.6,
+			layers: ["top", "bottom"],
+		},
+		{
+			type: "pcb_plated_hole",
+			pcb_plated_hole_id: "clad_hole_b",
+			pcb_port_id: "clad_port_b",
+			shape: "circle",
+			x: 10,
+			y: 0,
+			hole_diameter: 1,
+			outer_diameter: 1.6,
+			layers: ["top", "bottom"],
+		},
+		{
+			type: "pcb_via",
+			pcb_via_id: "clad_via",
+			x: 20,
+			y: 0,
+			hole_diameter: 0.3,
+			outer_diameter: 0.6,
+			layers: ["top", "bottom"],
+		},
+		{
+			type: "pcb_hole",
+			pcb_hole_id: "clad_mounting_hole",
+			hole_shape: "circle",
+			hole_diameter: 2,
+			x: 30,
+			y: 0,
+		},
+		{
+			type: "pcb_trace",
+			pcb_trace_id: "clad_buried_trace",
+			route: [
+				{
+					route_type: "wire",
+					x: 0,
+					y: 0,
+					width: 0.2,
+					layer: "inner1",
+					start_pcb_port_id: "clad_port_a",
+				},
+				{
+					route_type: "wire",
+					x: 10,
+					y: 0,
+					width: 0.2,
+					layer: "inner1",
+					end_pcb_port_id: "clad_port_b",
+				},
+			],
+		},
+	] as CircuitJson;
+
+const createFinalCircuit = (): CircuitJson =>
+	[
+		{
+			type: "pcb_plated_hole",
+			pcb_plated_hole_id: "final_hole_a",
+			pcb_port_id: "final_port_a",
+			pcb_component_id: "final_prefab_component",
+			shape: "circle",
+			x: 0.0000001,
+			y: 0,
+			hole_diameter: 1,
+			outer_diameter: 1.6,
+			layers: ["bottom", "top"],
+		},
+		{
+			type: "pcb_plated_hole",
+			pcb_plated_hole_id: "final_hole_b",
+			pcb_port_id: "final_port_b",
+			pcb_component_id: "final_prefab_component",
+			shape: "circle",
+			x: 10,
+			y: 0,
+			hole_diameter: 1,
+			outer_diameter: 1.6,
+			layers: ["top", "bottom"],
+		},
+		{
+			type: "pcb_via",
+			pcb_via_id: "final_via",
+			x: 20,
+			y: 0,
+			hole_diameter: 0.3,
+			outer_diameter: 0.6,
+			layers: ["top", "bottom"],
+		},
+		{
+			type: "pcb_hole",
+			pcb_hole_id: "final_mounting_hole",
+			hole_shape: "circle",
+			hole_diameter: 2,
+			x: 30,
+			y: 0,
+		},
+		{
+			type: "pcb_plated_hole",
+			pcb_plated_hole_id: "circuit_only_hole",
+			shape: "circle",
+			x: 40,
+			y: 0,
+			hole_diameter: 0.8,
+			outer_diameter: 1.4,
+			layers: ["top", "bottom"],
+		},
+		{
+			type: "pcb_trace",
+			pcb_trace_id: "renamed_clad_trace",
+			route: [
+				{
+					route_type: "wire",
+					x: 10.0000001,
+					y: 0,
+					width: 0.2,
+					layer: "inner1",
+					start_pcb_port_id: "final_port_b",
+				},
+				{
+					route_type: "wire",
+					x: 0,
+					y: 0,
+					width: 0.2,
+					layer: "inner1",
+					end_pcb_port_id: "final_port_a",
+				},
+			],
+		},
+		{
+			type: "pcb_trace",
+			pcb_trace_id: "circuit_trace_to_hole",
+			route: [
+				{
+					route_type: "wire",
+					x: -5,
+					y: 0,
+					width: 0.15,
+					layer: "top",
+				},
+				{
+					route_type: "wire",
+					x: -1,
+					y: 0,
+					width: 0.15,
+					layer: "top",
+					end_pcb_port_id: "final_port_a",
+				},
+			],
+		},
+		{
+			type: "pcb_trace",
+			pcb_trace_id: "circuit_trace_through_via",
+			route: [
+				{
+					route_type: "wire",
+					x: 15,
+					y: 0,
+					width: 0.15,
+					layer: "top",
+				},
+				{
+					route_type: "via",
+					x: 20.0000001,
+					y: 0,
+					from_layer: "top",
+					to_layer: "bottom",
+				},
+				{
+					route_type: "wire",
+					x: 25,
+					y: 0,
+					width: 0.15,
+					layer: "bottom",
+				},
+			],
+		},
+		{
+			type: "pcb_silkscreen_text",
+			pcb_silkscreen_text_id: "unchanged_marker",
+			text: "keep me",
+			anchor_position: { x: 0, y: 5 },
+			anchor_alignment: "center",
+			font: "tscircuit2024",
+			font_size: 1,
+			layer: "top",
+		},
+	] as CircuitJson;
+
+describe("removeUnusedPrefabHoles", () => {
+	test("matches by geometry and removes only unused clad holes", () => {
+		const finalCircuit = createFinalCircuit();
+		const finalTraces = finalCircuit.filter(
+			(element) => element.type === "pcb_trace",
+		);
+		const marker = finalCircuit.at(-1);
+
+		const result = removeUnusedPrefabHoles(
+			createCladCircuit(),
+			finalCircuit,
+		);
+
+		expect(result.matchedCladHoleCount).toBe(4);
+		expect(result.removedUnusedCladHoleCount).toBe(2);
+		expect(result.preservedUsedCladHoleCount).toBe(2);
+		expect(result.matchedCladTraceCount).toBe(1);
+		expect(result.unmatchedCladTraceCount).toBe(0);
+		expect(result.countsByType).toEqual({
+			pcb_hole: { matched: 1, removed: 1, preserved: 0 },
+			pcb_plated_hole: { matched: 2, removed: 1, preserved: 1 },
+			pcb_via: { matched: 1, removed: 0, preserved: 1 },
+		});
+
+		const remainingHoleIds = result.circuitJson.flatMap((element) => {
+			if (element.type === "pcb_plated_hole") {
+				return [element.pcb_plated_hole_id];
+			}
+			if (element.type === "pcb_via") return [element.pcb_via_id];
+			if (element.type === "pcb_hole") return [element.pcb_hole_id];
+			return [];
+		});
+		expect(remainingHoleIds).toEqual([
+			"final_hole_a",
+			"final_via",
+			"circuit_only_hole",
+		]);
+		expect(
+			result.circuitJson.filter((element) => element.type === "pcb_trace"),
+		).toEqual(finalTraces);
+		expect(result.circuitJson.at(-1)).toBe(marker);
+	});
+
+	test("uses endpoint geometry when port identifiers are absent", () => {
+		const clad = createCladCircuit().filter(
+			(element) =>
+				element.type === "pcb_plated_hole" && element.x === 0,
+		) as CircuitJson;
+		const final = createFinalCircuit().filter(
+			(element) =>
+				element.type === "pcb_plated_hole" && element.x < 1,
+		) as CircuitJson;
+		final.push({
+			type: "pcb_trace",
+			pcb_trace_id: "geometry_only_trace",
+			route: [
+				{ route_type: "wire", x: -2, y: 0, width: 0.1, layer: "top" },
+				{ route_type: "wire", x: 0, y: 0, width: 0.1, layer: "top" },
+			],
+		});
+
+		const result = removeUnusedPrefabHoles(clad, final);
+
+		expect(result.removedUnusedCladHoleCount).toBe(0);
+		expect(result.preservedUsedCladHoleCount).toBe(1);
+	});
+
+	test("matches duplicate geometry one-to-one", () => {
+		const clad = [
+			{
+				type: "pcb_hole",
+				pcb_hole_id: "clad_hole",
+				hole_shape: "circle",
+				hole_diameter: 2,
+				x: 0,
+				y: 0,
+			},
+		] as CircuitJson;
+		const final = [
+			{ ...clad[0], pcb_hole_id: "first" },
+			{ ...clad[0], pcb_hole_id: "second" },
+		] as CircuitJson;
+
+		const result = removeUnusedPrefabHoles(clad, final);
+
+		expect(result.removedUnusedCladHoleCount).toBe(1);
+		expect(result.circuitJson).toHaveLength(1);
+		expect(result.circuitJson[0]).toEqual(
+			expect.objectContaining({ pcb_hole_id: "second" }),
+		);
+	});
+
+	test("rejects missing clad geometry and invalid tolerance", () => {
+		expect(() => removeUnusedPrefabHoles([] as CircuitJson, [])).toThrow(
+			"does not contain any",
+		);
+		expect(() =>
+			removeUnusedPrefabHoles(createCladCircuit(), [] as CircuitJson),
+		).toThrow("Could not match 4 of 4 clad holes");
+		expect(() =>
+			removeUnusedPrefabHoles(createCladCircuit(), createFinalCircuit(), {
+				coordinateTolerance: 0,
+			}),
+		).toThrow("coordinateTolerance must be a positive finite number");
+	});
+});
+
+describe("parseCircuitJson", () => {
+	test("validates the top-level Circuit JSON shape", () => {
+		expect(() => parseCircuitJson("{")).toThrow();
+		expect(() => parseCircuitJson("{}")).toThrow(
+			"Circuit JSON must be an array",
+		);
+		expect(() => parseCircuitJson('[{"x":1}]')).toThrow(
+			"must be an object with a type",
+		);
+		expect(parseCircuitJson('[{"type":"pcb_board"}]')).toEqual([
+			{ type: "pcb_board" },
+		]);
+	});
+});
+

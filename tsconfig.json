@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "types": ["bun", "node"]
+  },
+  "include": ["app/**/*.ts", "app/**/*.tsx", "build/**/*.ts", "src/**/*.ts", "tests/**/*.ts", "vite.config.ts", "worker/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
