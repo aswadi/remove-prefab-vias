@@ -206,10 +206,12 @@ const createFinalCircuit = (): CircuitJson =>
 	] as CircuitJson;
 
 describe("removeUnusedPrefabHoles", () => {
-	test("matches by geometry and removes only unused clad holes", () => {
+	test("removes unused clad holes and all matched clad traces", () => {
 		const finalCircuit = createFinalCircuit();
 		const finalTraces = finalCircuit.filter(
-			(element) => element.type === "pcb_trace",
+			(element) =>
+				element.type === "pcb_trace" &&
+				element.pcb_trace_id !== "renamed_clad_trace",
 		);
 		const marker = finalCircuit.at(-1);
 
@@ -222,6 +224,7 @@ describe("removeUnusedPrefabHoles", () => {
 		expect(result.removedUnusedCladHoleCount).toBe(2);
 		expect(result.preservedUsedCladHoleCount).toBe(2);
 		expect(result.matchedCladTraceCount).toBe(1);
+		expect(result.removedCladTraceCount).toBe(1);
 		expect(result.unmatchedCladTraceCount).toBe(0);
 		expect(result.countsByType).toEqual({
 			pcb_hole: { matched: 1, removed: 1, preserved: 0 },
@@ -245,6 +248,13 @@ describe("removeUnusedPrefabHoles", () => {
 		expect(
 			result.circuitJson.filter((element) => element.type === "pcb_trace"),
 		).toEqual(finalTraces);
+		expect(
+			result.circuitJson.some(
+				(element) =>
+					element.type === "pcb_trace" &&
+					element.pcb_trace_id === "renamed_clad_trace",
+			),
+		).toBe(false);
 		expect(result.circuitJson.at(-1)).toBe(marker);
 	});
 
@@ -326,4 +336,3 @@ describe("parseCircuitJson", () => {
 		]);
 	});
 });
-

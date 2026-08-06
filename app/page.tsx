@@ -104,11 +104,11 @@ export default function Home() {
         <div className="hero-copy">
           <div>
             <p className="eyebrow">Circuit JSON cleanup utility</p>
-            <h1>Keep the routes.<br />Lose the holes.</h1>
+            <h1>Keep your routes.<br />Clear the clad.</h1>
           </div>
           <p className="lede">
             Compare any bare clad with its composed circuit. Shared geometry
-            identifies prefab holes automatically—no board-specific names or IDs.
+            identifies prefab holes and traces automatically—no board-specific names or IDs.
           </p>
         </div>
       </header>
@@ -169,7 +169,7 @@ export default function Home() {
                   <div>
                     <p className="result-label">Circuit ready</p>
                     <p className="result-value">
-                      {result.removedUnusedCladHoleCount.toLocaleString()} unused holes removed
+                      {result.removedUnusedCladHoleCount.toLocaleString()} holes + {result.removedCladTraceCount.toLocaleString()} traces removed
                     </p>
                   </div>
                   <span className="success-dot" />
@@ -184,7 +184,11 @@ export default function Home() {
                     <dd>{result.removedUnusedCladHoleCount.toLocaleString()}</dd>
                   </div>
                   <div>
-                    <dt>Preserved</dt>
+                    <dt>Clad traces</dt>
+                    <dd>{result.removedCladTraceCount.toLocaleString()}</dd>
+                  </div>
+                  <div>
+                    <dt>Used holes</dt>
                     <dd>{result.preservedUsedCladHoleCount.toLocaleString()}</dd>
                   </div>
                 </dl>
@@ -221,7 +225,7 @@ export default function Home() {
               <ol className="method-list">
                 <li><span>01</span> Match the clad inventory</li>
                 <li><span>02</span> Find non-clad trace usage</li>
-                <li><span>03</span> Remove only unused holes</li>
+                <li><span>03</span> Remove unused holes + clad traces</li>
               </ol>
             </div>
           )}
@@ -229,10 +233,9 @@ export default function Home() {
       </main>
 
       <footer>
-        Files stay in your browser and are never uploaded. Used holes and every
-        non-hole circuit element remain unchanged.
+        Files stay in your browser and are never uploaded. Used clad holes and
+        all circuit-owned elements remain unchanged.
       </footer>
     </div>
   )
 }
-

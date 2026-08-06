@@ -27,6 +27,7 @@ export interface RemoveUnusedPrefabHolesResult {
 	removedUnusedCladHoleCount: number;
 	preservedUsedCladHoleCount: number;
 	matchedCladTraceCount: number;
+	removedCladTraceCount: number;
 	unmatchedCladTraceCount: number;
 	countsByType: Record<HoleElementType, HoleRemovalCounts>;
 }
@@ -447,12 +448,15 @@ export const removeUnusedPrefabHoles = (
 
 	return {
 		circuitJson: finalCircuitJson.filter(
-			(_element, index) => !removedHoleIndices.has(index),
+			(_element, index) =>
+				!removedHoleIndices.has(index) &&
+				!matchedCladTraceFinalIndices.has(index),
 		),
 		matchedCladHoleCount: matchedHolesByFinalIndex.size,
 		removedUnusedCladHoleCount: removedHoleIndices.size,
 		preservedUsedCladHoleCount: usedHoleIndices.size,
 		matchedCladTraceCount: matchedCladTraceFinalIndices.size,
+		removedCladTraceCount: matchedCladTraceFinalIndices.size,
 		unmatchedCladTraceCount:
 			cladTraces.length - matchedCladTraceFinalIndices.size,
 		countsByType,

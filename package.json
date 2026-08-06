@@ -1,7 +1,7 @@
 {
   "name": "remove-prefab-vias",
   "version": "0.1.0",
-  "description": "Remove unused clad holes from a composed Circuit JSON design",
+  "description": "Remove unused clad holes and pre-existing clad traces from composed Circuit JSON",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",

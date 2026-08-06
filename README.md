@@ -1,6 +1,6 @@
 # remove-prefab-vias
 
-Remove unused holes belonging to a prefabricated clad from a composed
+Remove unused holes and pre-existing traces belonging to a prefabricated clad from a composed
 [Circuit JSON](https://github.com/tscircuit/circuit-json) design.
 
 The bare clad Circuit JSON is used as the reference inventory. Hole and trace
@@ -18,7 +18,8 @@ bun run dev
 ```
 
 Choose the bare clad and composed Circuit JSON files, review the matched,
-removed, and preserved counts, then download the cleaned file.
+removed, and preserved counts, then download the cleaned file. Every trace
+matched to the bare clad is removed; circuit-owned traces remain.
 
 ## CLI
 
@@ -32,8 +33,9 @@ bun run src/cli.ts \
 
 The inputs must use the same PCB coordinate system. The command handles
 `pcb_hole`, `pcb_plated_hole`, and `pcb_via` elements. It removes a matched clad
-hole only when no non-clad trace uses it. Used holes remain unchanged, as do all
-traces, ports, layers, and final-circuit-only holes.
+hole only when no non-clad trace uses it. It also removes every pre-existing
+clad trace matched by route geometry. Used holes, circuit-owned traces, ports,
+layers, and final-circuit-only holes remain unchanged.
 
 ## API
 
@@ -64,6 +66,5 @@ removeUnusedPrefabHoles(clad, finalCircuit, {
 })
 ```
 
-The function deliberately performs no laser-specific postprocessing: it does
-not remove prefab traces, enlarge drills, filter layers, or generate tooling
-paths.
+The function deliberately performs no other laser-specific postprocessing: it
+does not enlarge drills, filter layers, or generate tooling paths.

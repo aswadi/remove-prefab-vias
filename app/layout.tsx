@@ -5,7 +5,7 @@ import "./globals.css"
 
 const title = "Clad Hole Cleaner"
 const description =
-  "Remove unused prefab holes from composed Circuit JSON without board-specific identifiers."
+  "Remove unused prefab holes and pre-existing clad traces from composed Circuit JSON."
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers()
@@ -39,4 +39,3 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     </html>
   )
 }
-
