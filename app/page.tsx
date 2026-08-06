@@ -201,6 +201,10 @@ export default function Home() {
                     <span>{counts.removed} removed · {counts.preserved} kept</span>
                   </div>
                 ))}
+                <div className="type-row">
+                  <span>PCBBurn connectivity</span>
+                  <span>{result.emittedSyntheticSourceTraceCount} traces normalized</span>
+                </div>
               </div>
 
               <a className="download-link" href={outputUrl} download={outputName}>
@@ -233,8 +237,8 @@ export default function Home() {
       </main>
 
       <footer>
-        Files stay in your browser and are never uploaded. Used clad holes and
-        all circuit-owned elements remain unchanged.
+        Files stay in your browser and are never uploaded. Circuit-owned route
+        geometry remains unchanged, with missing source connectivity added for PCBBurn.
       </footer>
     </div>
   )

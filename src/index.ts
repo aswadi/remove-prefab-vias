@@ -29,6 +29,7 @@ export interface RemoveUnusedPrefabHolesResult {
 	matchedCladTraceCount: number;
 	removedCladTraceCount: number;
 	unmatchedCladTraceCount: number;
+	emittedSyntheticSourceTraceCount: number;
 	countsByType: Record<HoleElementType, HoleRemovalCounts>;
 }
 
@@ -266,6 +267,51 @@ const emptyCountsByType = (): Record<HoleElementType, HoleRemovalCounts> => ({
 	pcb_via: { matched: 0, removed: 0, preserved: 0 },
 });
 
+const ensurePcbTracesHaveSourceConnectivity = (
+	circuitJson: CircuitJson,
+): { circuitJson: CircuitJson; emittedSyntheticSourceTraceCount: number } => {
+	const sourceTraceIds = new Set(
+		circuitJson
+			.filter((element) => element.type === "source_trace")
+			.map((trace) => trace.source_trace_id),
+	);
+	const outputCircuitJson: CircuitJson = [];
+	const syntheticSourceTraces: CircuitElement[] = [];
+
+	for (const element of circuitJson) {
+		if (element.type !== "pcb_trace" || element.source_trace_id) {
+			outputCircuitJson.push(element);
+			continue;
+		}
+
+		const baseId = `source_trace_remove_prefab_vias_${element.pcb_trace_id}`;
+		let sourceTraceId = baseId;
+		let collisionIndex = 1;
+		while (sourceTraceIds.has(sourceTraceId)) {
+			sourceTraceId = `${baseId}_${collisionIndex}`;
+			collisionIndex += 1;
+		}
+		sourceTraceIds.add(sourceTraceId);
+
+		outputCircuitJson.push({
+			...element,
+			source_trace_id: sourceTraceId,
+		});
+		syntheticSourceTraces.push({
+			type: "source_trace",
+			source_trace_id: sourceTraceId,
+			connected_source_port_ids: [],
+			connected_source_net_ids: [],
+		} as CircuitElement);
+	}
+
+	outputCircuitJson.push(...syntheticSourceTraces);
+	return {
+		circuitJson: outputCircuitJson,
+		emittedSyntheticSourceTraceCount: syntheticSourceTraces.length,
+	};
+};
+
 export const parseCircuitJson = (contents: string): CircuitJson => {
 	const parsed: unknown = JSON.parse(contents);
 	if (!Array.isArray(parsed)) {
@@ -446,12 +492,16 @@ export const removeUnusedPrefabHoles = (
 		}
 	}
 
-	return {
-		circuitJson: finalCircuitJson.filter(
+	const filteredCircuitJson = finalCircuitJson.filter(
 			(_element, index) =>
 				!removedHoleIndices.has(index) &&
 				!matchedCladTraceFinalIndices.has(index),
-		),
+		);
+	const connectivityResult =
+		ensurePcbTracesHaveSourceConnectivity(filteredCircuitJson);
+
+	return {
+		circuitJson: connectivityResult.circuitJson,
 		matchedCladHoleCount: matchedHolesByFinalIndex.size,
 		removedUnusedCladHoleCount: removedHoleIndices.size,
 		preservedUsedCladHoleCount: usedHoleIndices.size,
@@ -459,6 +509,8 @@ export const removeUnusedPrefabHoles = (
 		removedCladTraceCount: matchedCladTraceFinalIndices.size,
 		unmatchedCladTraceCount:
 			cladTraces.length - matchedCladTraceFinalIndices.size,
+		emittedSyntheticSourceTraceCount:
+			connectivityResult.emittedSyntheticSourceTraceCount,
 		countsByType,
 	};
 };

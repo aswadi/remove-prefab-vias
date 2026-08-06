@@ -208,10 +208,12 @@ const createFinalCircuit = (): CircuitJson =>
 describe("removeUnusedPrefabHoles", () => {
 	test("removes unused clad holes and all matched clad traces", () => {
 		const finalCircuit = createFinalCircuit();
-		const finalTraces = finalCircuit.filter(
+		const remainingTraceIds = finalCircuit.flatMap(
 			(element) =>
 				element.type === "pcb_trace" &&
-				element.pcb_trace_id !== "renamed_clad_trace",
+				element.pcb_trace_id !== "renamed_clad_trace"
+					? [element.pcb_trace_id]
+					: [],
 		);
 		const marker = finalCircuit.at(-1);
 
@@ -226,6 +228,7 @@ describe("removeUnusedPrefabHoles", () => {
 		expect(result.matchedCladTraceCount).toBe(1);
 		expect(result.removedCladTraceCount).toBe(1);
 		expect(result.unmatchedCladTraceCount).toBe(0);
+		expect(result.emittedSyntheticSourceTraceCount).toBe(2);
 		expect(result.countsByType).toEqual({
 			pcb_hole: { matched: 1, removed: 1, preserved: 0 },
 			pcb_plated_hole: { matched: 2, removed: 1, preserved: 1 },
@@ -245,9 +248,18 @@ describe("removeUnusedPrefabHoles", () => {
 			"final_via",
 			"circuit_only_hole",
 		]);
+		const remainingTraces = result.circuitJson.filter(
+			(element) => element.type === "pcb_trace",
+		)
+		expect(remainingTraces.map((trace) => trace.pcb_trace_id)).toEqual(
+			remainingTraceIds,
+		)
+		expect(remainingTraces.every((trace) => Boolean(trace.source_trace_id))).toBe(
+			true,
+		)
 		expect(
-			result.circuitJson.filter((element) => element.type === "pcb_trace"),
-		).toEqual(finalTraces);
+			result.circuitJson.filter((element) => element.type === "source_trace"),
+		).toHaveLength(2)
 		expect(
 			result.circuitJson.some(
 				(element) =>
@@ -255,7 +267,7 @@ describe("removeUnusedPrefabHoles", () => {
 					element.pcb_trace_id === "renamed_clad_trace",
 			),
 		).toBe(false);
-		expect(result.circuitJson.at(-1)).toBe(marker);
+		expect(result.circuitJson).toContain(marker);
 	});
 
 	test("uses endpoint geometry when port identifiers are absent", () => {

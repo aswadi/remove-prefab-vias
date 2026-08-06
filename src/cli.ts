@@ -41,7 +41,7 @@ const run = async (): Promise<void> => {
 	);
 
 	console.log(
-		`Matched ${result.matchedCladHoleCount} clad holes, removed ${result.removedUnusedCladHoleCount} unused holes and ${result.removedCladTraceCount} pre-existing clad traces, preserved ${result.preservedUsedCladHoleCount} used holes, and wrote ${outputPath}`,
+		`Matched ${result.matchedCladHoleCount} clad holes, removed ${result.removedUnusedCladHoleCount} unused holes and ${result.removedCladTraceCount} pre-existing clad traces, preserved ${result.preservedUsedCladHoleCount} used holes, added source connectivity to ${result.emittedSyntheticSourceTraceCount} PCB traces, and wrote ${outputPath}`,
 	);
 };
 

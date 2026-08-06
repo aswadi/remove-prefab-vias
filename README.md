@@ -37,6 +37,11 @@ hole only when no non-clad trace uses it. It also removes every pre-existing
 clad trace matched by route geometry. Used holes, circuit-owned traces, ports,
 layers, and final-circuit-only holes remain unchanged.
 
+For PCBBurn compatibility, every remaining `pcb_trace` without a
+`source_trace_id` receives a deterministic synthetic `source_trace`. This keeps
+traces with incomplete endpoint metadata visible to Circuit JSON connectivity
+consumers without changing their route geometry.
+
 ## API
 
 ```ts
